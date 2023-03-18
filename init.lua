@@ -320,87 +320,88 @@ function auroras.do_update()
 
     for _, player in ipairs(minetest.get_connected_players()) do
         local pName = player:get_player_name()
-
-        if auroras.player_data[pName] == nil then
-            auroras.player_data[pName] = {
-                was_visible = false
-            }
-        end
-
-        local isVisible = false
-        local pos, biomeStrength, noiseVal
-        -- Determine if an aurora is visible for this player.
-        if isNight then
-            pos = player:get_pos()
-            biomeStrength = auroras.get_local_strength(pos)
-            if biomeStrength > 0.0 then
-                noiseVal = auroras.noise_curve(auroras.get_noise(pos))
-                isVisible = noiseVal > auroras.NOISE_MIN
-            end
-        end
-
-        if isVisible then
-            -- Save sky before changing anything.
-            if not auroras.USE_CLIMATE_API and
-                    auroras.player_data[pName].orig_sky == nil then
-                auroras.save_sky(player)
-            end
-
-            -- Transform noise for more or less aurora time.
-            noiseVal = (noiseVal - auroras.NOISE_MIN) / (1 - auroras.NOISE_MIN)
-
-            -- Determine strength of aurora based on time, biome, and natural
-            -- fluctuations (noise).
-            local noiseStrength = auroras.clamp(
-                    noiseVal / auroras.NOISE_TRANSITION, 0.0, 1.0)
-            local strength = timeStrength * biomeStrength * noiseStrength
-
-            -- Get aurora color based on strength/noise.
-            local fIdx = math.min(noiseVal, 1.0) * #auroras.COLOR_LUT
-            local lowIdx = math.floor(fIdx)
-            local highIdx = math.ceil(fIdx)
-            local fac = fIdx - lowIdx
-
-            local baseSky, baseHorizon =
-                    auroras.get_base_sky_colors(auroras.player_data[pName])
-            local skyColor = auroras.interp_colors(
-                baseSky,
-                auroras.interp_colors(
-                    auroras.COLOR_LUT[lowIdx],
-                    auroras.COLOR_LUT[highIdx],
-                    fac
-                ),
-                strength
-            )
-
-            -- Set all sky colors for now, since gamma, etc. affects which is used.
-            auroras.set_sky(player, {
-                type = "regular",
-                sky_color = {
-                    night_sky =     skyColor,
-                    dawn_sky =      skyColor,
-                    day_sky =       skyColor,
-                    night_horizon = baseHorizon,
-                    dawn_horizon =  baseHorizon,
-                    day_horizon =   baseHorizon,
+        if not archtec.black_sky[pName] then
+            if auroras.player_data[pName] == nil then
+                auroras.player_data[pName] = {
+                    was_visible = false
                 }
-            })
-
-            -- Set day/night ratio to lighten the sky during auroras.
-            local dnr = auroras.BASE_DAY_NIGHT_RATIO * (1 - strength) +
-                    auroras.DAY_NIGHT_RATIO * strength
-
-            if dnr ~= auroras.player_data[pName].last_dnr then
-                auroras.set_day_night_ratio(player, dnr)
-                auroras.player_data[pName].last_dnr = dnr
             end
-        elseif auroras.player_data[pName].was_visible then
-            -- Was visible, but not any more.
-            auroras.restore_sky(player)
-            auroras.set_day_night_ratio(player, nil)
-        end
 
-        auroras.player_data[pName].was_visible = isVisible
+            local isVisible = false
+            local pos, biomeStrength, noiseVal
+            -- Determine if an aurora is visible for this player.
+            if isNight then
+                pos = player:get_pos()
+                biomeStrength = auroras.get_local_strength(pos)
+                if biomeStrength > 0.0 then
+                    noiseVal = auroras.noise_curve(auroras.get_noise(pos))
+                    isVisible = noiseVal > auroras.NOISE_MIN
+                end
+            end
+
+            if isVisible then
+                -- Save sky before changing anything.
+                if not auroras.USE_CLIMATE_API and
+                        auroras.player_data[pName].orig_sky == nil then
+                    auroras.save_sky(player)
+                end
+
+                -- Transform noise for more or less aurora time.
+                noiseVal = (noiseVal - auroras.NOISE_MIN) / (1 - auroras.NOISE_MIN)
+
+                -- Determine strength of aurora based on time, biome, and natural
+                -- fluctuations (noise).
+                local noiseStrength = auroras.clamp(
+                        noiseVal / auroras.NOISE_TRANSITION, 0.0, 1.0)
+                local strength = timeStrength * biomeStrength * noiseStrength
+
+                -- Get aurora color based on strength/noise.
+                local fIdx = math.min(noiseVal, 1.0) * #auroras.COLOR_LUT
+                local lowIdx = math.floor(fIdx)
+                local highIdx = math.ceil(fIdx)
+                local fac = fIdx - lowIdx
+
+                local baseSky, baseHorizon =
+                        auroras.get_base_sky_colors(auroras.player_data[pName])
+                local skyColor = auroras.interp_colors(
+                    baseSky,
+                    auroras.interp_colors(
+                        auroras.COLOR_LUT[lowIdx],
+                        auroras.COLOR_LUT[highIdx],
+                        fac
+                    ),
+                    strength
+                )
+
+                -- Set all sky colors for now, since gamma, etc. affects which is used.
+                auroras.set_sky(player, {
+                    type = "regular",
+                    sky_color = {
+                        night_sky =     skyColor,
+                        dawn_sky =      skyColor,
+                        day_sky =       skyColor,
+                        night_horizon = baseHorizon,
+                        dawn_horizon =  baseHorizon,
+                        day_horizon =   baseHorizon,
+                    }
+                })
+
+                -- Set day/night ratio to lighten the sky during auroras.
+                local dnr = auroras.BASE_DAY_NIGHT_RATIO * (1 - strength) +
+                        auroras.DAY_NIGHT_RATIO * strength
+
+                if dnr ~= auroras.player_data[pName].last_dnr then
+                    auroras.set_day_night_ratio(player, dnr)
+                    auroras.player_data[pName].last_dnr = dnr
+                end
+            elseif auroras.player_data[pName].was_visible then
+                -- Was visible, but not any more.
+                auroras.restore_sky(player)
+                auroras.set_day_night_ratio(player, nil)
+            end
+
+            auroras.player_data[pName].was_visible = isVisible
+        end
     end
 
     auroras.was_night = isNight

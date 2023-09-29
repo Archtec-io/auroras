@@ -276,13 +276,13 @@ function auroras.set_sky(player, sky)
 end
 
 function auroras.save_sky(player)
-    local params = {player:get_sky()}
+    local params = player:get_sky(true)
     local sky = {
-        base_color =    params[1],
-        type =          params[2],
-        textures =      params[3],
-        clouds =        params[4],
-        sky_color =     player:get_sky_color()
+        base_color = params.base_color,
+        type = params.type,
+        textures = params.textures,
+        clouds = params.clouds,
+        sky_color = params.sky_color
     }
 
     auroras.player_data[player:get_player_name()].orig_sky = sky
@@ -295,7 +295,12 @@ function auroras.restore_sky(player)
         return
     end
 
-    auroras.set_sky(player, auroras.player_data[pName].orig_sky)
+    local params = player:get_sky(true)
+    for k, v in pairs(auroras.player_data[pName].orig_sky) do
+        params[k] = v
+    end
+
+    auroras.set_sky(player, params)
     auroras.player_data[pName].orig_sky = nil
 end
 
